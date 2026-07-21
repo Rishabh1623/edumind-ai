@@ -77,7 +77,7 @@ resource "aws_rds_cluster" "aurora" {
   cluster_identifier = "edumind-aurora-prod"
   engine             = "aurora-postgresql"
   engine_mode        = "provisioned"
-  engine_version     = "15.4"
+  engine_version     = "15.17"
   database_name      = "edumind"
 
   master_username = "edumind_admin"
