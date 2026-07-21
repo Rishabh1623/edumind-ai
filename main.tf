@@ -79,3 +79,16 @@ module "presentation" {
   account_id  = var.account_id
   common_tags = local.common_tags
 }
+
+module "observability" {
+  source = "./modules/observability"
+
+  aws_region                = var.aws_region
+  account_id                = var.account_id
+  common_tags               = local.common_tags
+  audit_logs_bucket_name    = module.storage.audit_logs_bucket_name
+  audit_logs_bucket_arn     = module.storage.audit_logs_bucket_arn
+  alb_arn_suffix            = module.application.alb_arn_suffix
+  asg_name                  = module.application.asg_name
+  aurora_cluster_identifier = module.database.aurora_cluster_identifier
+}

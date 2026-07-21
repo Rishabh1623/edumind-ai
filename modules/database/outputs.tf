@@ -17,3 +17,8 @@ output "aurora_secret_arn" {
   description = "ARN of the Secrets Manager secret holding Aurora master credentials"
   value       = aws_secretsmanager_secret.aurora_credentials.arn
 }
+
+output "aurora_cluster_identifier" {
+  description = "Cluster identifier of the Aurora cluster, used as the DBClusterIdentifier dimension in CloudWatch metrics"
+  value       = aws_rds_cluster.aurora.cluster_identifier
+}

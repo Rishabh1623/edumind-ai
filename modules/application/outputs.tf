@@ -17,3 +17,8 @@ output "asg_name" {
   description = "Name of the Auto Scaling Group"
   value       = aws_autoscaling_group.app.name
 }
+
+output "alb_arn_suffix" {
+  description = "ARN suffix of the ALB, used as the LoadBalancer dimension in CloudWatch metrics"
+  value       = aws_lb.app.arn_suffix
+}
