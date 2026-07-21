@@ -40,3 +40,11 @@ module "storage" {
   account_id  = var.account_id
   common_tags = local.common_tags
 }
+
+module "database" {
+  source = "./modules/database"
+
+  common_tags           = local.common_tags
+  private_subnet_ids    = module.networking.private_subnet_ids
+  rds_security_group_id = module.networking.sg_rds_id
+}
