@@ -72,3 +72,10 @@ module "search" {
   opensearch_security_group_id = module.networking.sg_opensearch_id
   app_role_arn                 = module.application.app_role_arn
 }
+
+module "presentation" {
+  source = "./modules/presentation"
+
+  account_id  = var.account_id
+  common_tags = local.common_tags
+}

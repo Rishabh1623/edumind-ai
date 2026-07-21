@@ -1,7 +1,3 @@
-# Populated incrementally as each module is wired into main.tf.
-# Remaining target set (per project spec):
-#   - CloudFront domain name    (presentation module)
-
 output "cognito_user_pool_id" {
   description = "ID of the Cognito user pool"
   value       = module.identity.user_pool_id
@@ -30,4 +26,9 @@ output "alb_dns_name" {
 output "opensearch_collection_endpoint" {
   description = "Endpoint of the OpenSearch Serverless collection"
   value       = module.search.collection_endpoint
+}
+
+output "cloudfront_domain_name" {
+  description = "Domain name of the CloudFront distribution"
+  value       = module.presentation.cloudfront_domain_name
 }
