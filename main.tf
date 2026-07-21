@@ -26,3 +26,10 @@ module "networking" {
 
   common_tags = local.common_tags
 }
+
+module "identity" {
+  source = "./modules/identity"
+
+  account_id  = var.account_id
+  common_tags = local.common_tags
+}
