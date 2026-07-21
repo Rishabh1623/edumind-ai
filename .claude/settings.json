@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "submit"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "agent",
+            "prompt": "A file was just written or edited by Claude Code. Hook input JSON:\n$ARGUMENTS\n\nExtract the changed file's path from tool_input.file_path (fall back to tool_response.filePath if absent). Read .claude/agents/code-reviewer.md at the project root and follow its instructions exactly to review that file. Report findings exactly as instructed there.",
+            "model": "claude-sonnet-5",
+            "timeout": 180,
+            "statusMessage": "Running code-reviewer subagent..."
+          }
+        ]
+      }
+    ]
+  }
+}
