@@ -33,3 +33,10 @@ module "identity" {
   account_id  = var.account_id
   common_tags = local.common_tags
 }
+
+module "storage" {
+  source = "./modules/storage"
+
+  account_id  = var.account_id
+  common_tags = local.common_tags
+}
