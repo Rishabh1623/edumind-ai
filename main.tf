@@ -52,12 +52,14 @@ module "database" {
 module "rag" {
   source = "./modules/rag"
 
-  aws_region            = var.aws_region
-  aurora_cluster_arn    = module.database.aurora_cluster_arn
-  aurora_secret_arn     = module.database.aurora_secret_arn
-  curriculum_bucket_arn = module.storage.curriculum_bucket_arn
-  curriculum_bucket_id  = module.storage.curriculum_bucket_name
-  tags                  = local.common_tags
+  aws_region               = var.aws_region
+  aurora_cluster_arn       = module.database.aurora_cluster_arn
+  aurora_secret_arn        = module.database.aurora_secret_arn
+  curriculum_bucket_arn    = module.storage.curriculum_bucket_arn
+  curriculum_bucket_id     = module.storage.curriculum_bucket_name
+  district_001_kms_key_arn = module.storage.district_001_kms_key_arn
+  district_002_kms_key_arn = module.storage.district_002_kms_key_arn
+  tags                     = local.common_tags
 }
 
 module "application" {

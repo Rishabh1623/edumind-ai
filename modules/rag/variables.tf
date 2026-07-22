@@ -29,6 +29,16 @@ variable "curriculum_bucket_id" {
   type        = string
 }
 
+variable "district_001_kms_key_arn" {
+  description = "ARN of the district_001 KMS key (from the storage module) — the curriculum bucket's default SSE-KMS key; the KB role needs kms:Decrypt to read any object encrypted with it"
+  type        = string
+}
+
+variable "district_002_kms_key_arn" {
+  description = "ARN of the district_002 KMS key (from the storage module) — required for objects under the district-002/ prefix, which the bucket policy forces to use this key"
+  type        = string
+}
+
 variable "tags" {
   description = "Common tags applied to every resource"
   type        = map(string)

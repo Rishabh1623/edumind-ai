@@ -94,6 +94,25 @@ resource "aws_iam_role_policy" "kb_s3_access" {
   })
 }
 
+# The curriculum bucket is SSE-KMS encrypted per district (see the storage
+# module's bucket policy), so s3:GetObject alone isn't enough — confirmed
+# live: ingestion failed with AccessDenied on kms:Decrypt for the
+# district_001 key on a plain PDF upload. Both district keys are granted
+# since content can land under either district's prefix.
+resource "aws_iam_role_policy" "kb_kms_access" {
+  name = "edumind-kb-kms-access"
+  role = aws_iam_role.bedrock_kb_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["kms:Decrypt", "kms:DescribeKey"]
+      Resource = [var.district_001_kms_key_arn, var.district_002_kms_key_arn]
+    }]
+  })
+}
+
 # 2. Bedrock Knowledge Base
 resource "aws_bedrockagent_knowledge_base" "curriculum" {
   name     = "edumind-curriculum-kb"
