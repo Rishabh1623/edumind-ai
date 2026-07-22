@@ -23,10 +23,8 @@ output "alb_dns_name" {
   value       = module.application.alb_dns_name
 }
 
-output "opensearch_collection_endpoint" {
-  description = "Endpoint of the OpenSearch Serverless collection"
-  value       = module.search.collection_endpoint
-}
+# opensearch_collection_endpoint output removed while module.search is
+# commented out in main.tf (see note there) — restore alongside it.
 
 output "cloudfront_domain_name" {
   description = "Domain name of the CloudFront distribution"
