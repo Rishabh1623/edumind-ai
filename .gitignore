@@ -20,6 +20,9 @@ __pycache__/
 .venv/
 venv/
 
+# Lambda build artifacts
+modules/rag/lambda/index.zip
+
 # Local settings
 .claude/settings.local.json
 

@@ -23,10 +23,17 @@ output "alb_dns_name" {
   value       = module.application.alb_dns_name
 }
 
-# opensearch_collection_endpoint output removed while module.search is
-# commented out in main.tf (see note there) — restore alongside it.
-
 output "cloudfront_domain_name" {
   description = "Domain name of the CloudFront distribution"
   value       = module.presentation.cloudfront_domain_name
+}
+
+output "knowledge_base_id" {
+  description = "ID of the Bedrock Knowledge Base"
+  value       = module.rag.knowledge_base_id
+}
+
+output "ingestion_lambda_arn" {
+  description = "ARN of the curriculum ingestion Lambda function"
+  value       = module.rag.ingestion_lambda_arn
 }

@@ -49,6 +49,17 @@ module "database" {
   rds_security_group_id = module.networking.sg_rds_id
 }
 
+module "rag" {
+  source = "./modules/rag"
+
+  aws_region            = var.aws_region
+  aurora_cluster_arn    = module.database.aurora_cluster_arn
+  aurora_secret_arn     = module.database.aurora_secret_arn
+  curriculum_bucket_arn = module.storage.curriculum_bucket_arn
+  curriculum_bucket_id  = module.storage.curriculum_bucket_name
+  tags                  = local.common_tags
+}
+
 module "application" {
   source = "./modules/application"
 
@@ -63,10 +74,10 @@ module "application" {
   district_002_kms_key_arn = module.storage.district_002_kms_key_arn
 }
 
-# Deliberately not deployed right now: OpenSearch Serverless has no
-# scale-to-zero floor (~4 OCU minimum billed 24/7) and Phase 1 has no
-# RAG/indexing code that would use it yet. Destroyed on 2026-07-22 to stop
-# the idle cost; re-enable this block before starting Phase 2.
+# OpenSearch Serverless permanently replaced by module.rag (Bedrock
+# Knowledge Base + pgvector on the existing Aurora cluster) — no
+# scale-to-zero floor made it a ~$700+/month fixed cost the RAG feature
+# doesn't need. See modules/search/main.tf and modules/rag/ for details.
 # module "search" {
 #   source = "./modules/search"
 #

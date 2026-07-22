@@ -73,6 +73,33 @@ resource "aws_db_subnet_group" "aurora" {
   })
 }
 
+# pgvector on Aurora PostgreSQL does NOT go through shared_preload_libraries
+# — confirmed against the live account via
+# `aws rds describe-db-cluster-parameters --db-cluster-parameter-group-name
+# default.aurora-postgresql15`, whose AllowedValues for that parameter are
+# auto_explain,orafce,pgaudit,pg_bigm,pg_similarity,pg_stat_statements,
+# pg_tle,pg_hint_plan,pg_prewarm,plprofiler,pglogical,pg_cron,pg_ad_mapping —
+# "pgvector" is not one of them and would have been rejected (or broken the
+# cluster on reboot). pgvector needs no preload at all; it's enabled purely
+# via `CREATE EXTENSION vector;` (see modules/rag/schema.sql). This
+# parameter group is kept, with only the already-default value, so it still
+# exists as a named place to tune cluster parameters later.
+resource "aws_rds_cluster_parameter_group" "edumind_pgvector" {
+  family      = "aurora-postgresql15"
+  name        = "edumind-aurora-pgvector-params"
+  description = "EduMind Aurora parameter group (pgvector needs no preload; enabled via CREATE EXTENSION)"
+
+  parameter {
+    name         = "shared_preload_libraries"
+    value        = "pg_stat_statements"
+    apply_method = "pending-reboot"
+  }
+
+  tags = merge(var.common_tags, {
+    Name = "edumind-aurora-pgvector-params"
+  })
+}
+
 resource "aws_rds_cluster" "aurora" {
   cluster_identifier = "edumind-aurora-prod"
   engine             = "aurora-postgresql"
@@ -83,8 +110,17 @@ resource "aws_rds_cluster" "aurora" {
   master_username = "edumind_admin"
   master_password = random_password.aurora_master.result
 
-  db_subnet_group_name   = aws_db_subnet_group.aurora.name
-  vpc_security_group_ids = [var.rds_security_group_id]
+  db_subnet_group_name            = aws_db_subnet_group.aurora.name
+  db_cluster_parameter_group_name = aws_rds_cluster_parameter_group.edumind_pgvector.name
+  vpc_security_group_ids          = [var.rds_security_group_id]
+
+  # Required for the RAG module's Bedrock Knowledge Base to reach this
+  # cluster at all: KB-with-RDS-storage queries/writes vectors via the RDS
+  # Data API (rds-data:ExecuteStatement), not a direct Postgres connection.
+  # Not part of the original parameter-group-only ask, but the feature
+  # cannot function without it. No reboot required, no data risk — it's an
+  # additional access path.
+  enable_http_endpoint = true
 
   storage_encrypted   = true
   deletion_protection = false
