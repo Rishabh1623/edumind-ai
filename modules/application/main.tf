@@ -1,3 +1,12 @@
+terraform {
+  required_providers {
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.4"
+    }
+  }
+}
+
 data "aws_ami" "al2023" {
   most_recent = true
   owners      = ["amazon"]
@@ -84,6 +93,58 @@ resource "aws_iam_instance_profile" "app" {
   })
 }
 
+# agent/ (multi-file Strands package) is too large to inline into EC2
+# user data the way app/app.py is below — base64-encoded it's ~19KB,
+# over the 16KB user-data limit even before the rest of the boot script
+# is added. It ships via S3 instead: zipped here, uploaded below, and
+# pulled down + unzipped into /app/agent by user_data.sh.tpl at boot.
+data "archive_file" "agent_package" {
+  type        = "zip"
+  source_dir  = "${path.root}/agent"
+  output_path = "${path.module}/agent_package.zip"
+}
+
+resource "aws_s3_bucket" "deploy_artifacts" {
+  bucket = "edumind-deploy-artifacts-${var.account_id}"
+
+  tags = merge(var.common_tags, {
+    Name = "edumind-deploy-artifacts"
+  })
+}
+
+resource "aws_s3_bucket_public_access_block" "deploy_artifacts" {
+  bucket = aws_s3_bucket.deploy_artifacts.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "deploy_artifacts" {
+  bucket = aws_s3_bucket.deploy_artifacts.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+# Application code only, no student data — plain SSE-S3 is enough here;
+# the per-district KMS keys in modules/storage are for the curriculum
+# bucket, which is the FERPA-scoped one.
+resource "aws_s3_object" "agent_package" {
+  bucket = aws_s3_bucket.deploy_artifacts.id
+  # Content-addressed key so every code change uploads a new object and
+  # produces a new launch template user_data (which is how new instances
+  # pick up the new code). Existing running instances aren't cycled
+  # automatically — the ASG has no instance_refresh configured.
+  key    = "agent-package/${data.archive_file.agent_package.output_base64sha256}.zip"
+  source = data.archive_file.agent_package.output_path
+  etag   = data.archive_file.agent_package.output_md5
+}
+
 resource "aws_launch_template" "app" {
   name_prefix   = "edumind-launch-template"
   image_id      = data.aws_ami.al2023.id
@@ -99,7 +160,14 @@ resource "aws_launch_template" "app" {
   # vpc_zone_identifier below, rather than pinned to a single subnet here,
   # so instances spread across both AZs.
   user_data = base64encode(templatefile("${path.module}/templates/user_data.sh.tpl", {
-    app_py_base64 = filebase64("${path.root}/app/app.py")
+    app_py_base64         = filebase64("${path.root}/app/app.py")
+    deploy_bucket         = aws_s3_bucket.deploy_artifacts.bucket
+    agent_package_key     = aws_s3_object.agent_package.key
+    aws_region            = var.aws_region
+    aurora_host           = var.aurora_host
+    sessions_table        = var.sessions_table_name
+    cognito_user_pool_id  = var.cognito_user_pool_id
+    cognito_app_client_id = var.cognito_app_client_id
   }))
 
   tag_specifications {

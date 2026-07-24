@@ -74,6 +74,12 @@ module "application" {
   aurora_secret_arn        = module.database.aurora_secret_arn
   district_001_kms_key_arn = module.storage.district_001_kms_key_arn
   district_002_kms_key_arn = module.storage.district_002_kms_key_arn
+  account_id               = var.account_id
+  aws_region               = var.aws_region
+  aurora_host              = module.database.aurora_cluster_endpoint
+  sessions_table_name      = module.database.dynamodb_table_name
+  cognito_user_pool_id     = module.identity.user_pool_id
+  cognito_app_client_id    = module.identity.app_client_id
 }
 
 # OpenSearch Serverless permanently replaced by module.rag (Bedrock

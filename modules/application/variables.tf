@@ -42,3 +42,33 @@ variable "district_002_kms_key_arn" {
   description = "ARN of the district_002 KMS key (from the storage module)"
   type        = string
 }
+
+variable "account_id" {
+  description = "AWS account ID, used to make the deploy artifacts bucket name globally unique"
+  type        = string
+}
+
+variable "aws_region" {
+  description = "AWS region the app runs in, passed to the instance as AWS_REGION"
+  type        = string
+}
+
+variable "aurora_host" {
+  description = "Aurora cluster writer endpoint (from the database module), passed to the instance as AURORA_HOST"
+  type        = string
+}
+
+variable "sessions_table_name" {
+  description = "DynamoDB sessions table name (from the database module), passed to the instance as SESSIONS_TABLE"
+  type        = string
+}
+
+variable "cognito_user_pool_id" {
+  description = "Cognito user pool ID (from the identity module), passed to the instance as COGNITO_USER_POOL_ID"
+  type        = string
+}
+
+variable "cognito_app_client_id" {
+  description = "Cognito app client ID (from the identity module), passed to the instance as COGNITO_APP_CLIENT_ID"
+  type        = string
+}
