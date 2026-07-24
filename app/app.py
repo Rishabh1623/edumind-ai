@@ -8,15 +8,28 @@ from flask import Flask, request, jsonify
 from jose import jwt, jwk
 from jose.utils import base64url_decode
 
-from agent.orchestrator import lead_agent
-from agent.tools.student_tools import set_student_context
-from agent.tools.teacher_tools import set_teacher_context
-from agent.tools.admin_tools import set_admin_context
-from agent.tools.shared.curriculum_tools import set_curriculum_context
-
 app = Flask(__name__)
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
+# Imported lazily behind a try/except, not at module scope like everything
+# above: every agent/tools module uses Strands' @tool decorator, so all of
+# these pull in the full Strands dependency tree, and a failure there
+# (missing package, bad version) must not take the whole process down.
+# Previously it did — a single failed import here crashed Flask before it
+# could even bind to a port, and systemd's Restart=always turned that into
+# an infinite crash loop with no informative response for either the ALB
+# health check or a caller.
+try:
+    from agent.orchestrator import lead_agent
+    from agent.tools.student_tools import set_student_context
+    from agent.tools.teacher_tools import set_teacher_context
+    from agent.tools.admin_tools import set_admin_context
+    from agent.tools.shared.curriculum_tools import set_curriculum_context
+except Exception as e:
+    lead_agent = None
+    set_student_context = set_teacher_context = set_admin_context = set_curriculum_context = None
+    logger.error(f"agent package failed to import, agent routes will 503: {str(e)}")
 
 AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
 USER_POOL_ID = os.environ["COGNITO_USER_POOL_ID"]
@@ -88,6 +101,12 @@ def get_claims_from_token(token: str) -> dict:
 
 @app.route("/health", methods=["GET"])
 def health():
+    if lead_agent is None:
+        return jsonify({
+            "status": "degraded",
+            "service": "EduMind AI",
+            "reason": "agent.orchestrator failed to import"
+        }), 503
     return jsonify({
         "status": "ok",
         "service": "EduMind AI",
@@ -97,6 +116,9 @@ def health():
 
 @app.route("/chat", methods=["POST"])
 def chat():
+    if lead_agent is None:
+        return jsonify({"error": "Agent temporarily unavailable"}), 503
+
     try:
         auth_header = request.headers.get("Authorization", "")
         if not auth_header.startswith("Bearer "):

@@ -3,7 +3,24 @@ set -eu -o pipefail
 exec > >(tee /var/log/edumind-user-data.log) 2>&1
 
 dnf update -y
-dnf install -y python3 python3-pip unzip
+
+# AL2023's default `python3` package is 3.9, but strands-agents requires
+# >=3.10 (confirmed from its wheel metadata) — pip3 install would silently
+# fail against 3.9 and, combined with the best-effort install below, leave
+# every instance crash-looping on ModuleNotFoundError. Prefer 3.12, then
+# 3.11, and only fall back to the system 3.9 if neither package exists
+# (in which case strands-agents still won't install, but the rest of the
+# app's dependencies do).
+if dnf install -y python3.12 python3.12-pip; then
+  PYTHON_BIN=/usr/bin/python3.12
+elif dnf install -y python3.11 python3.11-pip; then
+  PYTHON_BIN=/usr/bin/python3.11
+else
+  echo "WARNING: neither python3.12 nor python3.11 available, falling back to system python3 (<3.10, strands-agents will not install)"
+  dnf install -y python3 python3-pip
+  PYTHON_BIN=/usr/bin/python3
+fi
+dnf install -y unzip
 
 mkdir -p /app
 echo "${app_py_base64}" | base64 -d > /app/app.py
@@ -18,18 +35,18 @@ unzip -o /tmp/agent_package.zip -d /app/agent
 
 # psycopg2-binary/python-jose/requests are required by the real Phase 2
 # app (Aurora is PostgreSQL, and the app verifies Cognito JWTs against
-# the pool's JWKS); strands-agents install is best-effort so a transient
-# failure there doesn't block the app from starting.
-pip3 install flask boto3 psycopg2-binary "python-jose[cryptography]" requests
-pip3 install strands-agents || echo "strands-agents install failed, continuing without it"
+# the pool's JWKS). strands-agents is still installed with the rest, not
+# best-effort — app.py requires it to serve any route, so silently
+# continuing without it just trades an install failure for a crash loop.
+"$PYTHON_BIN" -m pip install flask boto3 psycopg2-binary "python-jose[cryptography]" requests strands-agents
 
-cat > /etc/systemd/system/edumind-app.service <<'UNIT'
+cat > /etc/systemd/system/edumind-app.service <<UNIT
 [Unit]
 Description=EduMind Flask application
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3 /app/app.py
+ExecStart=$PYTHON_BIN /app/app.py
 Restart=always
 User=root
 WorkingDirectory=/app
